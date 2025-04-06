@@ -1,0 +1,10 @@
+# Compiled files from Coq
+*.aux
+*.glob
+*.vo
+*.vok
+*.vos
+
+# Makefile
+.Makefile.d
+Makefile.conf
