@@ -66,6 +66,6 @@ Definition isEmpty (t : Segtree) : bool :=
 Fixpoint height (t : Segtree) : nat :=
     match t with
     | Empty  => 0
-    | Node l _ _ _ _ => 1 + (height l)
+    | Node l _ _ _ r => 1 + max (height l) (height r)
     end
 .
