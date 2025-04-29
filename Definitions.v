@@ -2,6 +2,13 @@ Require Import Nat.
 Require Import List.
 Require Import Bool.
 Require Import Datatypes.
+Require Import Coq.Arith.PeanoNat.
+From Coq Require Import Recdef List.
+From Coq Require Import Lia.
+Import ListNotations.
+
+Lemma TODO : forall {A:Prop}, A.
+Admitted.
 
 Require Coq.Program.Wf.
 
@@ -79,16 +86,32 @@ Fixpoint pointUpdate (t : Segtree) (index value : nat) : Segtree :=
       end
   end.
 
-(**Fixpoint split {X:Type} (l:list X) : (list X × list X) :=
+  Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
   match l with
-  | [] ⇒ ([],[])
-  | [x] ⇒ ([x],[])
-  |
-  | x1::x2::l' ⇒
-    let (l1,l2) := split l' in
-    (x1::l1,x2::l2)
-  end.*)
-Fixpoint build (l : list nat) (lbound rbound : nat) : Segtree .
+  | [] => Empty
+  | [x] => Node Empty x lbound rbound Empty 
+  | _ =>  let mid := Nat.div (length l + 1) 2 in
+          let firstHalf := firstn mid l in
+          let secondHalf := skipn mid l in
+          let leftTree := build firstHalf lbound (mid-1) in
+          let rightTree := build secondHalf mid rbound in
+          let value :=
+            match leftTree, rightTree with
+            | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
+            | Node _ lv _ _ _, Empty => lv
+            | Empty, Node _ rv _ _ _ => rv
+            | Empty, Empty => 0
+          end in Node leftTree value lbound rbound rightTree
+  end.
+  Next Obligation.
+    apply TODO.
+  Qed.
+  Next Obligation.
+  apply TODO.
+  Qed.
+  Next Obligation.
+  apply TODO.
+  Qed.
 
 (* Example usage: Compute the segment tree for an array *)
 Definition segtree_example_12 : Segtree :=
@@ -128,7 +151,7 @@ Definition isEmpty (t : Segtree) : bool :=
 Fixpoint height (t : Segtree) : nat :=
     match t with
     | Empty           => 0
-    | Node l _ _ _ r  => 1 + max (height l) (height r)
+    | Node l _ _ _ r  => S (Nat.max (height l) (height r))
     end
 .
 
@@ -150,3 +173,6 @@ Compute (pointUpdate segtree_example_123 1 4).
 Compute segtree_example_123.
 Compute (update segtree_example_123 0 1 0).
 Compute (balanced segtree_example_123).
+
+Compute (build [1; 2; 3] 0 2).
+Compute segtree_example_123.
