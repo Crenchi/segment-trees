@@ -3,16 +3,15 @@ Require Import List.
 Require Import Bool.
 Require Import Datatypes.
 Require Import Coq.Arith.PeanoNat.
+Require Import Lia.
+Require Import Arith Psatz.
 From Coq Require Import Recdef List.
-From Coq Require Import Lia.
 Import ListNotations.
+Require Coq.Program.Wf.
 
 Lemma TODO : forall {A:Prop}, A.
 Admitted.
 
-Require Coq.Program.Wf.
-
-Import ListNotations.
 
 (* Generic segment tree definition *)
 Inductive Segtree : Type :=
@@ -72,7 +71,7 @@ Fixpoint pointUpdate (t : Segtree) (index value : nat) : Segtree :=
         t
   end.
 
-  Fixpoint update (t : Segtree) (lbound rbound value : nat) : Segtree :=
+Fixpoint update (t : Segtree) (lbound rbound value : nat) : Segtree :=
   match rbound with
   | 0 =>
       match lbound with
@@ -86,32 +85,76 @@ Fixpoint pointUpdate (t : Segtree) (index value : nat) : Segtree :=
       end
   end.
 
-  Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
+
+Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
   match l with
   | [] => Empty
   | [x] => Node Empty x lbound rbound Empty 
-  | _ =>  let mid := Nat.div (length l + 1) 2 in
-          let firstHalf := firstn mid l in
-          let secondHalf := skipn mid l in
-          let leftTree := build firstHalf lbound (mid-1) in
-          let rightTree := build secondHalf mid rbound in
-          let value :=
-            match leftTree, rightTree with
-            | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
-            | Node _ lv _ _ _, Empty => lv
-            | Empty, Node _ rv _ _ _ => rv
-            | Empty, Empty => 0
-          end in Node leftTree value lbound rbound rightTree
+  | _ =>
+    let mid : nat := Nat.div (length l + 1) 2 in
+    let firstHalf := firstn mid l in
+    let secondHalf := skipn mid l in
+    let leftTree := build firstHalf lbound (mid-1) in
+    let rightTree := build secondHalf mid rbound in
+    let value :=
+      match leftTree, rightTree with
+      | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
+      | Node _ lv _ _ _, Empty => lv
+      | Empty, Node _ rv _ _ _ => rv
+      | Empty, Empty => 0
+      end
+    in Node leftTree value lbound rbound rightTree
   end.
-  Next Obligation.
-    apply TODO.
-  Qed.
-  Next Obligation.
-  apply TODO.
-  Qed.
-  Next Obligation.
-  apply TODO.
-  Qed.
+Next Obligation.
+  assert (1 <= 1) as Hle11 by lia.
+  pose proof Nat.divmod_spec (length l + 1) 1 0 1 Hle11 as H1.
+  simpl in H1.
+  destruct (Nat.divmod (length l + 1) 1 0 1) as [n rem] eqn:Hdiv.
+  destruct rem as [|[|rem']]; simpl in *.
+  - assert (length l = 2 * n) by lia.
+    rewrite firstn_length.
+    rewrite Nat.min_l.
+    + rewrite H2.
+      assert (length l >= 2) by (destruct l as [|a [|b tl]]; simpl in *; try contradiction; lia; lia).
+      lia.
+    + lia.
+  - assert (length l = 2 * n - 1) by lia.
+    rewrite firstn_length.
+    rewrite Nat.min_l.
+    + rewrite H2.
+      assert (length l >= 2). 
+      {
+        destruct l as [|a [|b tl]]; simpl in *; try contradiction.
+        exfalso.  apply (H a). reflexivity. lia.
+      }
+      lia.
+    + lia.
+  - lia.
+Qed.
+Next Obligation.
+assert (1 <= 1) as Hle11 by lia.
+  pose proof Nat.divmod_spec (length l + 1) 1 0 1 Hle11 as H1.
+  simpl in H1.
+  destruct (Nat.divmod (length l + 1) 1 0 1) as [n rem] eqn:Hdiv.
+  destruct rem as [|[|rem']]; simpl in *.
+  - assert (length l = 2 * n) by lia.
+    rewrite skipn_length.
+    assert (length l >= 1).  
+      {
+        destruct l. contradiction H0. reflexivity. simpl. lia.
+      }
+    assert (n > 0) by (rewrite H2 in *; lia).
+    rewrite H2. lia.
+  - assert (length l = 2 * n - 1) by lia.
+    rewrite skipn_length.
+    rewrite H2. lia.
+  - lia.
+Qed.
+Next Obligation.
+  split.
+  + discriminate.
+  + discriminate.
+Qed.
 
 (* Example usage: Compute the segment tree for an array *)
 Definition segtree_example_12 : Segtree :=
