@@ -16,8 +16,7 @@ Admitted.
 (* Generic segment tree definition *)
 Inductive Segtree : Type :=
     | Empty
-    | Node (l : Segtree) (value lbound rbound : nat) (r : Segtree)
-.
+    | Node (l : Segtree) (value lbound rbound : nat) (r : Segtree).
 
 (* Core functions for a segment tree *)
 (* These functions pertain to summation *)
@@ -26,7 +25,7 @@ Fixpoint query (t : Segtree) (tl tr : nat) : option nat :=
     | Empty => None
     | Node l value lbound rbound r =>
     (* 3 cases, case 1: no overlap *)
-    if (tl <? lbound) || (rbound <? tr) then None
+    if (rbound <? tl) || (tr <? lbound) then None
     (* Case 2: full overlap *)
     else if (tl <=? lbound) && (rbound <=? tr) then Some value
     (* Case 3: Partial overlap — combine results *)
@@ -84,7 +83,6 @@ Fixpoint update (t : Segtree) (lbound rbound value : nat) : Segtree :=
       | false => t
       end
   end.
-
 
 Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
   match l with
@@ -156,6 +154,74 @@ Next Obligation.
   + discriminate.
 Qed.
 
+  
+Lemma div_lt_self : forall n, n >= 2 -> (n + 1) / 2 < n.
+Proof.
+  intros n H.
+  destruct n as [| [| n']].
+  * simpl. lia.
+  * simpl. lia.
+  * inversion H.
+    - simpl. lia.
+    - rewrite <- H0. rewrite <- H0 in H1. rewrite <- H0 in H. apply Nat.div_lt_upper_bound with (b := 2). lia. lia.
+Qed.
+
+Function build2 (l : list nat) (lbound rbound : nat) {measure length l} : Segtree :=
+  match l with
+  | [] => Empty
+  | [x] => Node Empty x lbound rbound Empty 
+  | _ =>
+    let mid : nat := Nat.div (length l + 1) 2 in
+    let firstHalf := firstn mid l in
+    let secondHalf := skipn mid l in
+    let leftTree := build2 firstHalf lbound (mid-1) in
+    let rightTree := build2 secondHalf mid rbound in
+    let value :=
+      match leftTree, rightTree with
+      | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
+      | Node _ lv _ _ _, Empty => lv
+      | Empty, Node _ rv _ _ _ => rv
+      | Empty, Empty => 0
+      end
+    in Node leftTree value lbound rbound rightTree
+  end.
+Proof.
+  * intros. rewrite skipn_length.
+    assert (Hlen_pos : length (x :: n :: l1) >= 2). { simpl. lia. }
+    replace (length (x :: n :: l1)) with (S (S (length l1))) by reflexivity.
+    assert (H : (S (S (length l1)) + 1) / 2 >= 1). {destruct l1. simpl. lia. apply Nat.div_le_lower_bound. auto. simpl. lia. }
+    lia.
+  * intros. rewrite skipn_length.
+    assert (Hlen_pos : length (x :: n :: l1) >= 2). { simpl. lia. }
+    replace (length (x :: n :: l1)) with (S (S (length l1))) by reflexivity.
+    assert (H : (S (S (length l1)) + 1) / 2 >= 1). {destruct l1. simpl. lia. apply Nat.div_le_lower_bound. auto. simpl. lia. }
+    lia.
+  * intros. rewrite firstn_length.
+    destruct (Nat.min ((length (x :: n :: l1) + 1) / 2) (length (x :: n :: l1))) eqn:Hmin.
+    - simpl. lia.
+    - assert (Hlen : length (x :: n :: l1) >= 2) by (simpl; lia).
+      remember (length (x :: n :: l1)) as n2 eqn:Hlen'.
+      assert (Hdiv : (n2 + 1) / 2 < n2).
+      {
+        destruct n2 as [| [| n']].
+          + simpl. discriminate.
+          + simpl. discriminate.
+          + apply div_lt_self. auto.
+      }
+      rewrite <- Hmin. lia.
+Defined.
+
+
+Definition build_aux (l : list nat) : Segtree := build l 0 (length l - 1).
+
+Lemma div_upper_bound : forall a b,
+  b > 0 -> a / b <= a.
+Proof.
+  intros. apply Nat.div_le_upper_bound. lia. induction b.
+  * lia.
+  * lia.
+Qed.
+
 (* Example usage: Compute the segment tree for an array *)
 Definition segtree_example_12 : Segtree :=
   Node
@@ -205,7 +271,30 @@ Fixpoint fastestRoute (t : Segtree) : nat :=
     end
 .
 
-Definition balanced (t : Segtree) : bool := (height t - fastestRoute t) <? 2.
+Fixpoint amountOfNodes (t : Segtree) : nat :=
+    match t with
+    | Empty           => 0
+    | Node l _ _ _ r  => 1 + (amountOfNodes l) + (amountOfNodes r)
+    end
+.
+
+Definition height_diff_ok l r :=
+  height l = height r \/
+  height l = S (height r) \/
+  height r = S (height l).
+
+Inductive balanced : Segtree -> Prop :=
+  | balancedEmpty : balanced Empty
+  | balancedNode : forall l r v lbound rbound,
+      balanced l ->
+      balanced r ->
+      height_diff_ok l r ->
+      balanced (Node l v lbound rbound r).
+
+Definition balancedFunc (t : Segtree) : Prop := height t - fastestRoute t <= 1.
+
+Definition sublist (l : list nat) (i j : nat) : list nat :=
+  firstn (j - i + 1) (skipn i l).
 
 Compute segtree_example_12.
 Compute segtree_example_123.
@@ -216,6 +305,8 @@ Compute (pointUpdate segtree_example_123 1 4).
 Compute segtree_example_123.
 Compute (update segtree_example_123 0 1 0).
 Compute (balanced segtree_example_123).
+Compute query segtree_example_123 1 2.
 
-Compute (build [1; 2; 3] 0 2).
+Compute query (build [1; 2; 3] 0 2) 2 2.
+Compute build_aux [1; 2; 3].
 Compute segtree_example_123.
