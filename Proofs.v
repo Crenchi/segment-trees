@@ -320,28 +320,24 @@ Proof.
     + reflexivity.
 Qed.
 
-(* try induction on rbound.*)
-Lemma RangeUpdate_preserves_height : forall t lbound rbound value, balanced t ->
-  height t = height (update t lbound rbound value).
+Lemma RangeUpdate_preserves_height : forall lbound rbound value, forall t, balanced t ->
+    height t = height (update t lbound rbound value).
 Proof.
-  induction t as [| l IHl v lo hi r IHr]; intros lbound rbound value Hbal.
-  - rewrite Range_update_empty_tree_returns_empty_tree. reflexivity.
-  - simpl in *. remember ((lbound <=? rbound) && (lo <=? rbound) && (lbound <=? hi)) as in_range.
-      destruct in_range eqn:Hin_range.
-      + destruct (lo =? hi) eqn:Hleaf.
-        * apply Nat.eqb_eq in Hleaf. rewrite Hleaf. apply TODO.
-        * remember (pointUpdate l lbound value) as l'.
-          remember (pointUpdate r lbound value) as r'.
-          inversion Hbal as [| ? ? ? ? ? Hbl Hbr Hhd H ]. subst.
-  
-          assert (balanced l) by exact Hbl.
-          assert (balanced r) by exact Hbr.
-  
-          specialize (IHl lbound rbound value Hbl).
-          specialize (IHr lbound rbound value Hbr).
-          apply TODO.
-      + simpl. apply TODO.
-Admitted.
+  intros lbound rbound value.
+  induction rbound as [| rbound' IHrbound]; intros t Hbal.
+  - destruct lbound.
+    + apply pointUpdate_preserves_height. assumption.
+    + reflexivity.
+  - simpl. remember (lbound <=? S rbound') as boundTrue eqn:HboundTrue.
+    destruct boundTrue.
+    + symmetry in HboundTrue. apply Nat.leb_le in HboundTrue.
+      assert (balanced (pointUpdate t (S rbound') value)) as Hbal'. { apply Point_update_does_not_violate_balanced; assumption. }
+      apply IHrbound in Hbal'.
+      rewrite pointUpdate_preserves_height with (t := t) (index := S rbound') (value := value) by assumption.
+      apply IHrbound.
+      apply Point_update_does_not_violate_balanced. assumption.
+    + reflexivity.
+Qed.
 
 (* Range update on a segment tree does not violate the balanced invariant*)
 Lemma Range_update_does_not_violate_balanced : forall (t : Segtree) (lbound rbound number : nat),
