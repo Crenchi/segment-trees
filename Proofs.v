@@ -340,9 +340,25 @@ Proof.
 Qed.
 
 (* Range update on a segment tree does not violate the balanced invariant*)
-Lemma Range_update_does_not_violate_balanced : forall (t : Segtree) (lbound rbound number : nat),
-    balanced(update t lbound rbound number).
-Admitted.
+Lemma Range_update_does_not_violate_balanced : forall (t : Segtree) (lbound rbound number : nat), balanced t ->
+  balanced (update t lbound rbound number).
+Proof.
+  intros t lbound rbound number Hbalanced.
+  generalize dependent t.
+  induction rbound as [| rbound' IHr].
+  - intros t Hbalanced.
+    simpl.
+    destruct lbound.
+    + apply Point_update_does_not_violate_balanced. assumption.
+    + assumption.
+  - intros t Hbalanced. simpl.
+    remember (lbound <=? S rbound') as in_range eqn:Hrange.
+    destruct in_range.
+    -- assert (Hpt := Point_update_does_not_violate_balanced t (S rbound') number Hbalanced).
+      apply IHr.
+      assumption.
+    -- assumption.
+Qed.
 
 (* Range update returns the same size segment tree*)
 Lemma Range_update_keeps_same_length_tree : forall (t : Segtree) (lbound rbound number : nat), balanced t ->
