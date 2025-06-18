@@ -3,6 +3,7 @@ Require Import SegmentTrees.Definitions.
 From Coq Require Import Recdef List.
 Import ListNotations.
 Require Import Lia.
+Require Import PeanoNat.
 
 Compute segtree_example_123.
 
@@ -109,17 +110,17 @@ Proof.
   reflexivity.
 Qed.
 
+(* TODO rename these 2*)
 Lemma update_pointUpdate_cancel : forall (t : Segtree) (lbound rbound value : nat), lbound <= S(rbound) ->
   update (pointUpdate t (S rbound) value) lbound rbound value = update t lbound (S rbound) value.
 Proof.
-Admitted.
+  intros. simpl. remember (PeanoNat.Nat.leb lbound (S rbound)) as in_range.
+  destruct in_range.
+  - reflexivity.
+  - symmetry in Heqin_range. apply Nat.leb_gt in Heqin_range. lia.
+Qed.
 
-Lemma update_pointUpdate_cancel2 : forall (t : Segtree) (lbound rbound value : nat), lbound <= S(rbound) ->
-  pointUpdate (update t lbound rbound value) rbound value = update t lbound rbound value.
-Proof.
-Admitted.
-
-Lemma update_pointUpdate_cancel3 : forall (t : Segtree) (lbound rbound value : nat), lbound <= S(rbound) ->
-  update t lbound (S rbound) value = update (update t lbound (S rbound) value) lbound rbound value.
+Lemma update_pointUpdate_cancel2 : forall (t : Segtree) (lbound rbound value : nat), lbound <= S rbound ->
+  pointUpdate (update t lbound rbound value) (S rbound) value = update t lbound rbound value.
 Proof.
 Admitted.

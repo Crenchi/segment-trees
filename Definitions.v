@@ -84,7 +84,7 @@ Fixpoint update (t : Segtree) (lbound rbound value : nat) : Segtree :=
       end
   end.
 
-Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
+Program Fixpoint build2 (l : list nat) (lbound rbound : nat) {measure (length l)} : Segtree :=
   match l with
   | [] => Empty
   | [x] => Node Empty x lbound rbound Empty 
@@ -92,8 +92,8 @@ Program Fixpoint build (l : list nat) (lbound rbound : nat) {measure (length l)}
     let mid : nat := Nat.div (length l + 1) 2 in
     let firstHalf := firstn mid l in
     let secondHalf := skipn mid l in
-    let leftTree := build firstHalf lbound (mid-1) in
-    let rightTree := build secondHalf mid rbound in
+    let leftTree := build2 firstHalf lbound (mid-1) in
+    let rightTree := build2 secondHalf mid rbound in
     let value :=
       match leftTree, rightTree with
       | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
@@ -154,6 +154,19 @@ Next Obligation.
   + discriminate.
 Qed.
 
+Definition get_value (leftTree rightTree : Segtree) : nat :=
+  match leftTree, rightTree with
+  | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
+  | Node _ lv _ _ _, Empty => lv
+  | Empty, Node _ rv _ _ _ => rv
+  | Empty, Empty => 0
+  end.
+
+Definition get_value_oneTree (t : Segtree) : option nat :=
+  match t with
+  | Node _ v _ _ _ => Some v
+  | Empty => None
+  end.
   
 Lemma div_lt_self : forall n, n >= 2 -> (n + 1) / 2 < n.
 Proof.
@@ -166,31 +179,20 @@ Proof.
     - rewrite <- H0. rewrite <- H0 in H1. rewrite <- H0 in H. apply Nat.div_lt_upper_bound with (b := 2). lia. lia.
 Qed.
 
-Function build2 (l : list nat) (lbound rbound : nat) {measure length l} : Segtree :=
+Function build (l : list nat) (lbound rbound : nat) {measure length l} : Segtree :=
   match l with
   | [] => Empty
-  | [x] => Node Empty x lbound rbound Empty 
+  | [x] => Node Empty x lbound rbound Empty
   | _ =>
     let mid : nat := Nat.div (length l + 1) 2 in
     let firstHalf := firstn mid l in
     let secondHalf := skipn mid l in
-    let leftTree := build2 firstHalf lbound (mid-1) in
-    let rightTree := build2 secondHalf mid rbound in
-    let value :=
-      match leftTree, rightTree with
-      | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
-      | Node _ lv _ _ _, Empty => lv
-      | Empty, Node _ rv _ _ _ => rv
-      | Empty, Empty => 0
-      end
-    in Node leftTree value lbound rbound rightTree
+    let leftTree := build firstHalf lbound (mid-1) in
+    let rightTree := build secondHalf mid rbound in
+    let value := get_value leftTree rightTree in
+    Node leftTree value lbound rbound rightTree
   end.
 Proof.
-  * intros. rewrite skipn_length.
-    assert (Hlen_pos : length (x :: n :: l1) >= 2). { simpl. lia. }
-    replace (length (x :: n :: l1)) with (S (S (length l1))) by reflexivity.
-    assert (H : (S (S (length l1)) + 1) / 2 >= 1). {destruct l1. simpl. lia. apply Nat.div_le_lower_bound. auto. simpl. lia. }
-    lia.
   * intros. rewrite skipn_length.
     assert (Hlen_pos : length (x :: n :: l1) >= 2). { simpl. lia. }
     replace (length (x :: n :: l1)) with (S (S (length l1))) by reflexivity.
@@ -210,6 +212,29 @@ Proof.
       }
       rewrite <- Hmin. lia.
 Defined.
+
+
+Lemma build_unf l lbound rbound :
+  build l lbound rbound = 
+  match l with
+  | [] => Empty
+  | [x] => Node Empty x lbound rbound Empty 
+  | _ =>
+    let mid : nat := Nat.div (length l + 1) 2 in
+    let firstHalf := firstn mid l in
+    let secondHalf := skipn mid l in
+    let leftTree := build firstHalf lbound (mid-1) in
+    let rightTree := build secondHalf mid rbound in
+    let value :=
+      match leftTree, rightTree with
+      | Node _ lv _ _ _, Node _ rv _ _ _ => lv + rv
+      | Node _ lv _ _ _, Empty => lv
+      | Empty, Node _ rv _ _ _ => rv
+      | Empty, Empty => 0
+      end
+    in Node leftTree value lbound rbound rightTree
+  end.
+Proof. apply build_equation. Qed.
 
 
 Definition build_aux (l : list nat) : Segtree := build l 0 (length l - 1).
@@ -280,8 +305,7 @@ Fixpoint amountOfNodes (t : Segtree) : nat :=
 
 Definition height_diff_ok l r :=
   height l = height r \/
-  height l = S (height r) \/
-  height r = S (height l).
+  height l = S (height r).
 
 Inductive balanced : Segtree -> Prop :=
   | balancedEmpty : balanced Empty
@@ -290,6 +314,39 @@ Inductive balanced : Segtree -> Prop :=
       balanced r ->
       height_diff_ok l r ->
       balanced (Node l v lbound rbound r).
+
+Lemma Balanced_even : forall (l r : Segtree) (lbound rbound v : nat),
+  balanced l -> balanced r ->
+  height l = height r ->
+  balanced (Node l v lbound rbound r).
+Proof.
+  intros. apply balancedNode; try assumption.
+  unfold height_diff_ok. rewrite H1. lia.
+Qed.
+    
+Lemma Balanced_left_skew : forall (l r : Segtree) (lbound rbound v : nat),
+  balanced l -> balanced r ->
+  height l = height r + 1 ->
+  balanced (Node l v lbound rbound r).
+Proof.
+  intros. apply balancedNode; try assumption.
+  unfold height_diff_ok. rewrite H1. lia.
+Qed.
+
+
+(* That the value is the sum of the list*)
+Inductive SegTreeSumOfList : Segtree -> list nat -> Prop :=
+  | sumEmpty  : SegTreeSumOfList Empty []
+  | sumLeaf : forall value index, SegTreeSumOfList (Node Empty value index index Empty) [value]
+  | sumNode : forall ltree rtree llist rlist lbound rbound,
+        llist <> [] ->
+        rrlist <> [] ->
+        SegTreeSumOfList ltree llist ->
+        SegTreeSumOfList rtree rlist ->
+        let value := get_value ltree rtree in
+        SegTreeSumOfList (Node ltree value lbound rbound rtree) (llist ++ rlist).
+
+
 
 Definition balancedFunc (t : Segtree) : Prop := height t - fastestRoute t <= 1.
 
