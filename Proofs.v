@@ -767,16 +767,21 @@ Proof.
       assert (Some value2 = get_value_oneTree (Node s1 value2 lbound0 rbound0 s2)). { simpl. reflexivity. } 
       rewrite H6. rewrite IHSegTreeSumOfList2. 
       rewrite sum_app. reflexivity.
-      { intros Hl. discriminate Hl. } Search ([]).
-      admit. (* H1 + H3 could imply this goal, but not necessarily. *)
+      { intros Hl. discriminate Hl. }
+      rewrite app_nil_l in H1. assumption.
     + assert (sum rlist = 0). {inversion H4. reflexivity. }
       inversion H4; subst.
-      rewrite sum_app. rewrite H5. simpl. f_equal. rewrite Nat.add_0_r. simpl in IHSegTreeSumOfList1.
-      admit.
-    +  simpl in IHSegTreeSumOfList1.
+      rewrite sum_app. rewrite H5. simpl. rewrite Nat.add_0_r. simpl in IHSegTreeSumOfList1.
+      apply IHSegTreeSumOfList1.
+      discriminate. assumption.
+    + simpl in IHSegTreeSumOfList1.
       simpl in IHSegTreeSumOfList2.
-      
-Admitted.
+      assert (Node s1 value0 lbound0 rbound0 s2 <> Empty). { discriminate. }
+      assert (Node s3 value1 lbound1 rbound1 s4 <> Empty). { discriminate. }
+      assert (Hv0 : Some value0 = Some (sum llist)) by apply (IHSegTreeSumOfList1 H5 H).
+      assert (Hv1 : Some value1 = Some (sum rlist)) by apply (IHSegTreeSumOfList2 H6 H2).
+      f_equal. inversion Hv0; inversion Hv1. rewrite sum_app. reflexivity.
+Qed.
 
 
 (* ------------------------------ TODO *)
