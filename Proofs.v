@@ -750,34 +750,27 @@ Proof.
   - congruence.
   - simpl. rewrite Nat.add_0_r. reflexivity.
   - unfold value. unfold get_value_oneTree. unfold get_value.
-    destruct ltree eqn:Eltree; destruct rtree eqn:Ertree; simpl get_value.
+    destruct ltree eqn:Eltree; destruct rtree eqn:Ertree; simpl get_value;
+    simpl in IHSegTreeSumOfList1; simpl in IHSegTreeSumOfList2.
 
     + assert (sum llist = 0) by (inversion H3; reflexivity).
       assert (sum rlist = 0) by (inversion H4; reflexivity).
       rewrite sum_app. rewrite H5; rewrite H6. reflexivity.
 
     + assert (sum llist = 0) by (inversion H3; reflexivity).
-      assert (llist = []) by (inversion H3; reflexivity).
       inversion H4; subst.
       * rewrite sum_app. rewrite H5. simpl. rewrite Nat.add_0_r. reflexivity.
-      * rewrite sum_app. rewrite sum_app. rewrite H5. simpl.
-        assert (Some value2 = get_value_oneTree (Node s1 value2 lbound0 rbound0 s2)). { simpl. reflexivity. } 
-        rewrite H6.
-        rewrite IHSegTreeSumOfList2. 
-        ** rewrite sum_app. reflexivity.
-        ** discriminate.
-        ** rewrite app_nil_l in H1. assumption.
+      * rewrite sum_app. rewrite H5. simpl.
+        assert (Node s1 value2 lbound0 rbound0 s2 <> Empty). {discriminate. }
+        apply IHSegTreeSumOfList2; assumption.
 
     + assert (sum rlist = 0). {inversion H4. reflexivity. }
       inversion H4; subst.
-      rewrite sum_app. rewrite H5. rewrite Nat.add_0_r. simpl in IHSegTreeSumOfList1.
-      apply IHSegTreeSumOfList1.
-      * discriminate.
-      * assumption.
-      
-    + simpl in IHSegTreeSumOfList1.
-      simpl in IHSegTreeSumOfList2.
-      assert (Node s1 value0 lbound0 rbound0 s2 <> Empty). { discriminate. }
+      rewrite sum_app. rewrite H5. rewrite Nat.add_0_r.
+      assert (Node s1 value0 lbound0 rbound0 s2 <> Empty). {discriminate. }
+      apply IHSegTreeSumOfList1; assumption.
+
+    + assert (Node s1 value0 lbound0 rbound0 s2 <> Empty). { discriminate. }
       assert (Node s3 value1 lbound1 rbound1 s4 <> Empty). { discriminate. }
       assert (Hv0 : Some value0 = Some (sum llist)) by apply (IHSegTreeSumOfList1 H5 H).
       assert (Hv1 : Some value1 = Some (sum rlist)) by apply (IHSegTreeSumOfList2 H6 H2).
