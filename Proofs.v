@@ -746,34 +746,35 @@ Lemma SegTreeSum_correct : forall (t : Segtree) (l : list nat),
   l <> [] ->
   get_value_oneTree t = Some (sum l).
 Proof.
-  intros.
-  induction H.
+  intros. induction H.
   - congruence.
   - simpl. rewrite Nat.add_0_r. reflexivity.
   - unfold value. unfold get_value_oneTree. unfold get_value.
-    destruct ltree eqn:Eltree;
-    destruct rtree eqn:Ertree;
-    simpl get_value.
+    destruct ltree eqn:Eltree; destruct rtree eqn:Ertree; simpl get_value.
 
     + assert (sum llist = 0) by (inversion H3; reflexivity).
       assert (sum rlist = 0) by (inversion H4; reflexivity).
-      rewrite sum_app. rewrite H5. rewrite H6. reflexivity.
+      rewrite sum_app. rewrite H5; rewrite H6. reflexivity.
 
     + assert (sum llist = 0) by (inversion H3; reflexivity).
       assert (llist = []) by (inversion H3; reflexivity).
       inversion H4; subst.
-      rewrite sum_app. rewrite H5. simpl. f_equal. rewrite Nat.add_0_r. reflexivity.
-      rewrite sum_app. rewrite sum_app. rewrite H5. simpl.
-      assert (Some value2 = get_value_oneTree (Node s1 value2 lbound0 rbound0 s2)). { simpl. reflexivity. } 
-      rewrite H6. rewrite IHSegTreeSumOfList2. 
-      rewrite sum_app. reflexivity.
-      { intros Hl. discriminate Hl. }
-      rewrite app_nil_l in H1. assumption.
+      * rewrite sum_app. rewrite H5. simpl. rewrite Nat.add_0_r. reflexivity.
+      * rewrite sum_app. rewrite sum_app. rewrite H5. simpl.
+        assert (Some value2 = get_value_oneTree (Node s1 value2 lbound0 rbound0 s2)). { simpl. reflexivity. } 
+        rewrite H6.
+        rewrite IHSegTreeSumOfList2. 
+        ** rewrite sum_app. reflexivity.
+        ** discriminate.
+        ** rewrite app_nil_l in H1. assumption.
+
     + assert (sum rlist = 0). {inversion H4. reflexivity. }
       inversion H4; subst.
-      rewrite sum_app. rewrite H5. simpl. rewrite Nat.add_0_r. simpl in IHSegTreeSumOfList1.
+      rewrite sum_app. rewrite H5. rewrite Nat.add_0_r. simpl in IHSegTreeSumOfList1.
       apply IHSegTreeSumOfList1.
-      discriminate. assumption.
+      * discriminate.
+      * assumption.
+      
     + simpl in IHSegTreeSumOfList1.
       simpl in IHSegTreeSumOfList2.
       assert (Node s1 value0 lbound0 rbound0 s2 <> Empty). { discriminate. }
@@ -784,7 +785,7 @@ Proof.
 Qed.
 
 
-(* ------------------------------ TODO *)
+(* ------------------------------ TODO  use well founded induction*)
 Search skipn.
 Lemma build_preserves_sum : forall l lbound rbound,
     lbound <= rbound ->
